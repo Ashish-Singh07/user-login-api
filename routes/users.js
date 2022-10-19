@@ -8,7 +8,7 @@ var Users = require("./../models/users");
 /* GET all users listing */
 router.get("/", async(req, res, next) => {
   try {
-    var users = Users.find({});
+    var users = await Users.find({});
     users ? res.json({users}) : next(createError(404, "No user found"));
   } catch (error) {
     next(error);
@@ -65,6 +65,20 @@ router.post("/login", async (req, res, next) => {
 //implementing authorization for all the routes which come after this point without indivisually plugging in the authorization middleware
 router.use(auth.verifyToken);
 
+//if user is logged in return the user object containing all the user details
+router.get("/auth/user", async(req, res) => {
+  if (req.user && req.user.userId) {
+    //if the request has a valid jwt token, auth.verifyToken middleware is able to verify the user and add user object to the request which contains userId and email
+    try {
+      var user = await Users.findById(req.user.userId, "name email -_id");  //fetch only name and email of the user
+      user ? res.json(user) : next(createError(404, "No user found by this id"));
+    } catch (error) {
+      next(error);
+    }
+  } else {
+    next(createError(401,'Protected Resource is not accesible since user is not logged in'));
+  }
+});
 //implementing authorization on a protected route
 router.get("/auth/favourite", auth.verifyToken , (req, res) => {  //explicitly adding the auth.verifyToken middleware
   console.log(req.user);
